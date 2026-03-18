@@ -2,6 +2,7 @@ import { useAppStore } from './store/useAppStore';
 import HomePage from './pages/HomePage';
 import PrayerWallPage from './pages/PrayerWallPage';
 import ProfilePage from './pages/ProfilePage';
+import AdminPage from './pages/AdminPage';
 import Navigation from './components/Navigation';
 
 function App() {
@@ -12,8 +13,9 @@ function App() {
       {currentPage === 'home' && <HomePage />}
       {currentPage === 'prayer-wall' && <PrayerWallPage />}
       {currentPage === 'profile' && <ProfilePage />}
+      {currentPage === 'admin' && <AdminPage />}
 
-      {currentPage !== 'profile' && <Navigation />}
+      {currentPage !== 'profile' && currentPage !== 'admin' && <Navigation />}
     </div>
   );
 }

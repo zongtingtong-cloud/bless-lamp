@@ -8,7 +8,8 @@ export default function Navigation() {
   const navItems = [
     { id: 'home', icon: '🏠', label: '首页' },
     { id: 'prayer-wall', icon: '🧧', label: '祈福墙' },
-    { id: 'profile', icon: '👤', label: '我的' }
+    { id: 'profile', icon: '👤', label: '我的' },
+    { id: 'admin', icon: '📊', label: '管理' }
   ];
 
   return (

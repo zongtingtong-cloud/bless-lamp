@@ -163,12 +163,16 @@ class HuifuPayment {
     private function simulatePayment($params) {
         $orderId = $params['order_id'];
         $paymentType = $params['payment_type'] ?? 'unified';
+        $expireTime = date('YmdHis', time() + 300); // 5分钟过期
 
         $result = [];
 
-        // 生成模拟二维码（使用测试二维码）
-        $testWechatQR = 'weixin://wxpay/bizpayurl?pr=test123456';
-        $testAlipayQR = 'https://qr.alipay.com/test123456';
+        // 生成模拟二维码（使用测试二维码转图片）
+        $wechatUrl = 'weixin://wxpay/bizpayurl?pr=test' . $orderId . '&timeout=' . $expireTime;
+        $alipayUrl = 'https://qr.alipay.com/test' . $orderId . '?timeout=300';
+        
+        $testWechatQR = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . urlencode($wechatUrl);
+        $testAlipayQR = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . urlencode($alipayUrl);
 
         if ($paymentType === 'wechat' || $paymentType === 'unified') {
             $result['wechat'] = [
@@ -176,6 +180,7 @@ class HuifuPayment {
                 'qr_code' => $testWechatQR,
                 'hf_seq_id' => 'HF_WX' . time() . rand(1000, 9999),
                 'trade_type' => 'wechat',
+                'expire_time' => $expireTime,
             ];
         }
 
@@ -185,6 +190,7 @@ class HuifuPayment {
                 'qr_code' => $testAlipayQR,
                 'hf_seq_id' => 'HF_ALI' . time() . rand(1000, 9999),
                 'trade_type' => 'alipay',
+                'expire_time' => $expireTime,
             ];
         }
 
@@ -195,6 +201,7 @@ class HuifuPayment {
             'data' => $result,
             'order_id' => $orderId,
             'test_mode' => true,
+            'expire_time' => $expireTime,
         ];
     }
 
