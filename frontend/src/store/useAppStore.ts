@@ -157,6 +157,7 @@ interface AppState {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   resetSelection: () => void;
+  completePayment: () => void;
 }
 
 // AI祝福语生成
@@ -601,7 +602,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     isAnonymous: false,
     aiSuggestion: '',
     currentOrder: null
-  })
+  }),
+
+  completePayment: () => {
+    set({ 
+      showPaymentModal: false,
+      showSuccessModal: true 
+    });
+  }
 }));
 
 // Selectors

@@ -44,6 +44,7 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
   const [orderId, setOrderId] = useState<number | null>(null);
   const [polling, setPolling] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [expireTime, setExpireTime] = useState<number>(300); // 5分钟倒计时
 
   const runtime = getRuntime();
 
@@ -54,10 +55,18 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
     }
   }, [isOpen, selectedLamp, selectedPackage, onClose]);
 
-  // 轮询检查支付状态
+  // 轮询检查支付状态 + 倒计时
   useEffect(() => {
     let interval: NodeJS.Timeout;
+    let countdown: NodeJS.Timeout;
+    
     if (polling && orderId) {
+      // 倒计时
+      countdown = setInterval(() => {
+        setExpireTime(prev => Math.max(0, prev - 1));
+      }, 1000);
+      
+      // 检查支付状态
       interval = setInterval(async () => {
         try {
           const response = await fetch(`/api/order.php?action=get&id=${orderId}`);
@@ -74,6 +83,7 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
     }
     return () => {
       if (interval) clearInterval(interval);
+      if (countdown) clearInterval(countdown);
     };
   }, [polling, orderId, onPay]);
 
@@ -91,7 +101,7 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
     try {
       // 创建订单
       let order = currentOrder;
-      if (!order) {
+      if (!order || order.status === 'paid') {
         order = await createOrder();
       }
       
@@ -138,7 +148,7 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
     setIsProcessing(true);
     try {
       let order = currentOrder;
-      if (!order) {
+      if (!order || order.status === 'paid') {
         order = await createOrder();
       }
       
@@ -197,7 +207,8 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
 
     try {
       let order = currentOrder;
-      if (!order) {
+      // 如果没有订单，或订单已支付，重新创建
+      if (!order || order.status === 'paid') {
         order = await createOrder();
       }
 
@@ -221,6 +232,7 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
             ? result.data?.wechat_qr
             : result.data?.alipay_qr;
           setQrCode(qr);
+          setExpireTime(300); // 5分钟倒计时
           setPolling(true);
         }
       }
@@ -265,6 +277,10 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
                 <img src={qrCode} alt="支付二维码" className="w-48 h-48" />
               </div>
             </div>
+
+            <p className="text-center text-red-400 text-sm mb-2">
+              ⏰ 二维码 {Math.floor(expireTime / 60)}:{String(expireTime % 60).padStart(2, '0')} 后过期
+            </p>
 
             <p className="text-center text-gray-400 text-sm mb-4">
               {activePayment === 'wechat' ? '微信' : '支付宝'}扫码 · ¥{price.toFixed(2)}
