@@ -1,47 +1,24 @@
 <?php
 /**
  * 汇付天下支付配置
- * =======================
- * 使用说明：
- * 1. 在环境变量中配置以下参数，或直接在此文件中修改
- * 2. 签名密钥需要从汇付天下后台获取
- * =======================
  */
 
 // 汇付天下商户配置
-// 方式一：使用环境变量（推荐，更安全）
-define('HUIFU_SYS_ID', getenv('HUIFU_SYS_ID') ?: '');          // 系统号（渠道商/商户huifu_id）
-define('HUIFU_HUIFU_ID', getenv('HUIFU_HUIFU_ID') ?: '');      // 商户号
-define('HUIFU_PRODUCT_ID', getenv('HUIFU_PRODUCT_ID') ?: 'MCS'); // 产品号
-define('HUIFU_MCH_PRIV_KEY', getenv('HUIFU_MCH_PRIV_KEY') ?: '');  // 商户私钥（RSA签名用）
-define('HUIFU_HUIFU_PUBLIC_KEY', getenv('HUIFU_HUIFU_PUBLIC_KEY') ?: '');  // 汇付公钥（验签用）
+define('HUIFU_SYS_ID', '6666000177988481');
+define('HUIFU_HUIFU_ID', '6666000178497346');
+define('HUIFU_PRODUCT_ID', 'EDUSTD');
+define('HUIFU_MCH_PRIV_KEY', '-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQClAtVKz/2Een3xv0eHfddXhmz6NArxByJSkyd50/fWzMxEpGIKhI0u/2RZJxTGQInCBTOO51BVa0oW9Lx3e8ErR65//WuEZjd1pPdh8VPlGPl88nuCp6aUXcGuyIqoSgvPXWkghHuWBPiu/zdEUrBqUIyj70ZUZGQ1b+C3sNgM8hO46f8fbkRKG9v9hJF3akZaDjjCiyE7xP2O2oMQMezD0VAmNcKMl4Kjj+aP3pMEenZXKeDeLhXaaKYtRv0lZCOobmVTMKlJmqsm7uws7A5SNTExcCOTz7IFR9jNfrqDocy7EinWVQ3ICyHv62WnivJQ9QRLsMgZZT3i7YuhVJo9AgMBAAECggEAFjMgYPVEhTs5kHmMdQUQIJ1cMfkoc67jBjr396L11/crkByReBrHJ8iCRqBEYjuyjODIQ/SI0UUi7Z21cVm77kexiVSdz201DuXHxmyCPfMzNYUl6rkFZzaJ5SrjxKpZlmdZyl8ohVFb56c8VzvMsjDuCuwZCSeMd8f6cpwfJPaBKFWRGxvDMwPdOck91p1r/s7Mb/8Ukwlpt9IeDPVftOBu8VOrAHihAWvSTV055uy8C5En9gPgGyjnAcYqEb88zUJYzYZtTnhBxeL+XEeab8ww0nwLpLAk0jaxH8fYmk1YERV9eM0wDZfDNLG3BGa5zCxrxk87XjawS9H8qnnhIQKBgQDWflCToaY+LNaL0GR/ogGskFYQ6IHN9fxO8SZ1nxx/p1EfhRSOUfblNpg2B9fDT3XKH2P07zSVXSQ4Xvpk4lgbLHmplVmWMmp36erpiR2etUpF5XTXx3LlS01ZsqZjStu/VApoNq8qifmVbIWzPTbQiNyddVU30mF2Y9Smchoz6QKBgQDE8Tx+5WGjX5Wd01YG+pDL1lsBPcj3sYDi18caY5lmMZrg0dUYHohMiH9gl9XSZyhMoGE2qgWMP1X2C+9lxd52Kc/qWJ46snM8CB75+sRIM3lYkHMXDL0myDg+Zs0QZsudx7qnGzrmCUJzCVZRHcVy90VDEwLfH38plyE+P/cjNQKBgQCOlDCjshR7x/plvgTQArTyLI/JdYSzkAxDvXE/RqD/Cg2W0jOz1zAzdXMAl34JSkyWKv+a1Vcy4lMtVZVEcmD2zz2gSLLgcGrtgwSwcIDL+t6AT+K3fNEXMlMciPCpmB0ytX6lf5Q4xrataRIG7238eL2NvW0ESkiXFg1JBxf74QKBgGz9iFo9vYw5gMaIR6qzDmEQbuq/87FIdaiUe+aZyjIpL6pN1d10QEACpmOhg77eQgouE7651zonbv4s2r77A0Nnnl31zxNy4J0PbX0wj2HZwsUFo/vUm/WThrTaFZCHIxZdi2mhgzX9V93sA+3+SOB4Ace+BK/QcYJl1grqQW4lAoGARlcQpCKMOsIzyikg8UuQpccsU92HL3x9qcYZOTZlvrIQQ95SAFSnDGuYjDa8EksliYmLH+awXVt0/OwgtHHpF08AsMrIqkbJgbcZ5oG8O56aLjyDwSooS1/WqJDhHwmdkd2fzSzQNm8OdJOtdQmMYWWoSRIq1jbO7GCQu87S3yM=
+-----END PRIVATE KEY-----');
+define('HUIFU_HUIFU_PUBLIC_KEY', '-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAj0cErpkbk+6gznLFGn8+Y9VNvdL441I2uWuyq439aMSUYSoZzTXEglE/gyVud4+6+Y7+8Ho9Grm5cVCIW/ivFcOL0KWX8AW6zdWjmrxUU4hjHDfrdBNgAFNz6bRYB//WINPHa64vJOKjOMEn683QCHdMejyK4+bBiylIKCWNmfwWxf4Qw4yl6+tH6GXQR1K3Q8OeiaMhr3fq4+LT4a7OlQZ67VTkmChM3E/rfNLfOT30CsZePthRwuMXslZY9sDP+uExnGWPB1IO7f3+7GkicPshM6Ak4R8Vw0N0oXV6I7R1dN/ojlRXqB0x7ORCzO0HgM2cZyQ+Lnjy387LinNJJQIDAQAB
+-----END PUBLIC KEY-----');
 
-// 方式二：直接配置（仅测试环境使用）
-// define('HUIFU_SYS_ID', '6666000123120000');    // 替换为您的系统号
-// define('HUIFU_HUIFU_ID', '6666000123123123');  // 替换为您的商户号
-// define('HUIFU_PRODUCT_ID', 'MCS');              // 产品号
-// define('HUIFU_MCH_PRIV_KEY', '-----BEGIN PRIVATE KEY-----
-// 您的商户私钥
-// -----END PRIVATE KEY-----');
-// define('HUIFU_HUIFU_PUBLIC_KEY', '-----BEGIN PUBLIC KEY-----
-// 汇付公钥
-// -----END PUBLIC KEY-----');
+define('HUIFU_NOTIFY_URL', 'https://bless-you.top/api/order.php?action=payment-notify');
+define('HUIFU_API_URL', 'https://api.huifu.com');
+define('HUIFU_SIGN_TYPE', 'RSA');
+define('HUIFU_TEST_MODE', true);
 
-// 支付配置
-define('HUIFU_NOTIFY_URL', getenv('HUIFU_NOTIFY_URL') ?: '');  // 异步通知地址
-define('HUIFU_API_URL', 'https://api.huifu.com');              // 汇付API地址
-define('HUIFU_PAYMENT_API', '/v3/trade/payment/jspay');        // 支付API路径
-define('HUIFU_QUERY_API', '/v3/trade/query');                  // 订单查询API
-
-// 签名类型
-define('HUIFU_SIGN_TYPE', 'RSA');  // RSA 或 MD5
-
-// 测试模式（不发送真实请求）
-define('HUIFU_TEST_MODE', getenv('HUIFU_TEST_MODE') ?: true);
-
-/**
- * 获取汇付配置
- */
 function getHuifuConfig() {
     return [
         'sys_id' => HUIFU_SYS_ID,
@@ -53,9 +30,6 @@ function getHuifuConfig() {
     ];
 }
 
-/**
- * 检查汇付配置是否完整
- */
 function isHuifuConfigured() {
     return !empty(HUIFU_SYS_ID) && !empty(HUIFU_HUIFU_ID);
 }
