@@ -32,8 +32,16 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
     selectedLamp,
     selectedPackage,
     currentOrder,
-    createOrder
+    createOrder,
+    login
   } = useAppStore();
+
+  // 未登录时自动登录（匿名用户）
+  useEffect(() => {
+    if (!currentUser && isOpen) {
+      login('guest_' + Date.now());
+    }
+  }, [isOpen, currentUser, login]);
 
   const rechargePackages = useRechargePackages();
   const packages = rechargePackages.length > 0 ? rechargePackages : defaultRechargePackages;

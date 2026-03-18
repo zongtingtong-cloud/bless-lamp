@@ -2,6 +2,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const ADMIN_USER = { username: 'admin', password: 'admin123456' };
+const ADMIN_KEY = 'bless_admin_logged_in';
+
 type Tab = 'orders' | 'prayers' | 'stats' | 'users';
 
 interface Order {
@@ -45,6 +48,64 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem(ADMIN_KEY) === 'true');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  const handleLogin = () => {
+    if (username === ADMIN_USER.username && password === ADMIN_USER.password) {
+      setIsLoggedIn(true);
+      localStorage.setItem(ADMIN_KEY, 'true');
+      setLoginError('');
+    } else {
+      setLoginError('用户名或密码错误');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    localStorage.removeItem(ADMIN_KEY);
+    window.location.href = '/';
+  };
+
+  // 未登录显示登录表单
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#0a0a0a] via-[#1a1a2e] to-[#0a0a0a] flex items-center justify-center p-4">
+        <div className="bg-gradient-to-b from-[#1a1a2e] to-[#0a0a0a] rounded-2xl p-8 w-full max-w-sm border border-[#d4a550]/30">
+          <h2 className="text-2xl font-bold text-[#d4a550] text-center mb-6">🔐 管理后台</h2>
+          <input
+            type="text"
+            placeholder="用户名"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full px-4 py-3 mb-4 bg-black/50 border border-[#8B4513]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#d4a550]"
+          />
+          <input
+            type="password"
+            placeholder="密码"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-3 mb-4 bg-black/50 border border-[#8B4513]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#d4a550]"
+          />
+          {loginError && <p className="text-red-500 text-sm mb-4">{loginError}</p>}
+          <button
+            onClick={handleLogin}
+            className="w-full py-3 bg-[#d4a550] text-black font-bold rounded-xl hover:bg-[#c49a40]"
+          >
+            登录
+          </button>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="w-full mt-3 py-2 border border-[#8B4513]/50 text-gray-400 rounded-xl hover:border-[#d4a550]/50"
+          >
+            返回首页
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (tab === 'orders') fetchOrders();
@@ -360,6 +421,9 @@ export default function AdminPage() {
         </button>
         <button className="p-2 text-[#d4a550]">
           <span className="text-xl">📊</span>
+        </button>
+        <button onClick={handleLogout} className="p-2 text-gray-400">
+          <span className="text-xl">🚪</span>
         </button>
       </div>
     </div>

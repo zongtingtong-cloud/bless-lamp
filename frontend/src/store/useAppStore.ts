@@ -242,15 +242,37 @@ const mockPrayerWall: PrayerWallItem[] = [
   }
 ];
 
+// 从 localStorage 恢复登录状态
+const loadUserFromStorage = () => {
+  try {
+    const savedUser = localStorage.getItem('bless_user');
+    const saveTime = localStorage.getItem('bless_user_time');
+    if (savedUser && saveTime) {
+      // 7天内无需重新登录
+      const saveDate = new Date(saveTime);
+      const now = new Date();
+      const daysDiff = (now.getTime() - saveDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysDiff < 7) {
+        return { user: JSON.parse(savedUser), loggedIn: true };
+      }
+    }
+  } catch (e) {
+    console.error('恢复登录状态失败:', e);
+  }
+  return { user: null, loggedIn: false };
+};
+
+const savedUser = loadUserFromStorage();
+
 // Create Store
 export const useAppStore = create<AppState>((set, get) => ({
-  // Initial State
+  // Initial State - 尝试恢复登录状态
   lampTypes: [],
   timePackages: [],
   membershipRules: [],
   rechargePackages: [],
-  currentUser: null,
-  isLoggedIn: false,
+  currentUser: savedUser.user,
+  isLoggedIn: savedUser.loggedIn,
   selectedLamp: null,
   selectedPackage: null,
   prayerText: '',
@@ -304,6 +326,9 @@ export const useAppStore = create<AppState>((set, get) => ({
           currentUser: result.data,
           isLoggedIn: true
         });
+        // 保存登录状态到 localStorage（7天有效）
+        localStorage.setItem('bless_user', JSON.stringify(result.data));
+        localStorage.setItem('bless_user_time', new Date().toISOString());
         // 加载用户数据
         get().loadUserOrders();
         get().loadActiveLamps();
@@ -339,7 +364,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  logout: () => set({ currentUser: null, isLoggedIn: false }),
+  logout: () => {
+    localStorage.removeItem('bless_user');
+    localStorage.removeItem('bless_user_time');
+    set({ currentUser: null, isLoggedIn: false });
+  },
 
   selectLamp: (lamp) => set({ selectedLamp: lamp }),
 
