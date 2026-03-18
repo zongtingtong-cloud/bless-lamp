@@ -3,7 +3,7 @@
  * 汇付天下支付服务
  */
 
-require_once __DIR__ . '/payment.php';
+require_once __DIR__ . '/../config/payment.php';
 
 class HuifuPayment {
 
@@ -292,13 +292,6 @@ class HuifuPayment {
             'status' => $respData['trans_stat'] ?? '',
             'pay_time' => $respData['end_time'] ?? '',
         ];
-    }
-
-    /**
-     * 生成请求流水号
-     */
-    private function generateSeqId($orderId) {
-        return 'BL_' . $orderId . '_' . date('YmdHis') . rand(100, 999);
     }
 
     /**
