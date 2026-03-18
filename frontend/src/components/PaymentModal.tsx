@@ -18,13 +18,19 @@ interface PaymentModalProps {
   onPay: () => void;
 }
 
+// 检测运行环境
+const getRuntime = () => {
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.indexOf('micromessenger') > -1) return 'wechat';
+  if (ua.indexOf('alipayclient') > -1) return 'alipay';
+  return 'browser';
+};
+
 export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalProps) {
   const {
     currentUser,
     selectedLamp,
     selectedPackage,
-    prayerText,
-    prayerTarget,
     currentOrder,
     createOrder
   } = useAppStore();
@@ -37,8 +43,18 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
   const [qrCode, setQrCode] = useState('');
   const [orderId, setOrderId] = useState<number | null>(null);
   const [polling, setPolling] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // 轮询检查支付状态 - 必须在 early return 之前
+  const runtime = getRuntime();
+
+  // 如果没有选择套餐，直接关闭
+  useEffect(() => {
+    if (isOpen && (!selectedLamp || !selectedPackage)) {
+      onClose();
+    }
+  }, [isOpen, selectedLamp, selectedPackage, onClose]);
+
+  // 轮询检查支付状态
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (polling && orderId) {
@@ -49,7 +65,7 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
           if (data.success && data.data?.status === 'paid') {
             setPolling(false);
             setShowQRCode(false);
-            onPay(); // 支付成功
+            onPay();
           }
         } catch (e) {
           console.error('检查支付状态失败:', e);
@@ -61,20 +77,162 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
     };
   }, [polling, orderId, onPay]);
 
-  const handleBalancePayment = () => {
-    if (canUseBalance) {
-      onPay();
-    }
-  };
-
   const handleCloseQR = () => {
     setShowQRCode(false);
     setPolling(false);
     setQrCode('');
   };
 
+  // 处理微信支付
+  const handleWechatPay = async () => {
+    if (!currentUser || !selectedLamp || !selectedPackage) return;
+    
+    setIsProcessing(true);
+    try {
+      // 创建订单
+      let order = currentOrder;
+      if (!order) {
+        order = await createOrder();
+      }
+      
+      if (order) {
+        // 调用微信JS支付
+        const result = await createPayment(
+          String(order.id),
+          String(currentUser.id),
+          'wechat'
+        );
+        
+        if (result.success && result.data?.wechat_js) {
+          // 调用微信支付
+          const payData = result.data.wechat_js;
+          (window as any).WeixinJSBridge?.invoke(
+            'getBrandWCPayRequest',
+            {
+              appId: payData.appId,
+              timeStamp: payData.timeStamp,
+              nonceStr: payData.nonceStr,
+              package: payData.package,
+              signType: payData.signType,
+              paySign: payData.paySign
+            },
+            (res: any) => {
+              if (res.err_msg === 'get_brand_wcpay_request:ok') {
+                onPay();
+              }
+            }
+          );
+        }
+      }
+    } catch (error) {
+      console.error('微信支付失败:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // 处理支付宝支付
+  const handleAlipay = async () => {
+    if (!currentUser || !selectedLamp || !selectedPackage) return;
+    
+    setIsProcessing(true);
+    try {
+      let order = currentOrder;
+      if (!order) {
+        order = await createOrder();
+      }
+      
+      if (order) {
+        const result = await createPayment(
+          String(order.id),
+          String(currentUser.id),
+          'alipay'
+        );
+        
+        if (result.success && result.data?.alipay_js) {
+          // 支付宝JS支付
+          const payData = result.data.alipay_js;
+          (window as any).AlipayJSBridge?.call(
+            'tradePay',
+            {
+              orderStr: payData.orderStr
+            },
+            (res: any) => {
+              if (res.resultCode === '9000') {
+                onPay();
+              }
+            }
+          );
+        }
+      }
+    } catch (error) {
+      console.error('支付宝支付失败:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // 处理二维码支付
+  const handleQRPayment = async (paymentType: 'wechat' | 'alipay') => {
+    console.log('支付点击:', { paymentType, currentUser: !!currentUser, selectedLamp: !!selectedLamp, selectedPackage: !!selectedPackage, currentOrder });
+    
+    if (!currentUser) {
+      console.error('用户未登录');
+      alert('请先登录');
+      return;
+    }
+    if (!selectedLamp) {
+      console.error('未选择灯型');
+      alert('请选择灯型');
+      return;
+    }
+    if (!selectedPackage) {
+      console.error('未选择套餐');
+      alert('请选择套餐');
+      return;
+    }
+
+    setActivePayment(paymentType);
+    setShowQRCode(true);
+
+    try {
+      let order = currentOrder;
+      if (!order) {
+        order = await createOrder();
+      }
+
+      if (order) {
+        setOrderId(order.id);
+
+        const result = await createPayment(
+          String(order.id),
+          String(currentUser.id),
+          paymentType
+        );
+
+        if (result.success) {
+          const qr = paymentType === 'wechat'
+            ? result.data?.wechat_qr
+            : result.data?.alipay_qr;
+          setQrCode(qr);
+          setPolling(true);
+        }
+      }
+    } catch (error) {
+      console.error('创建支付失败:', error);
+    }
+  };
+
+  const basePrice = selectedLamp?.base_price * selectedPackage?.minutes || 0;
+  const withDiscount = basePrice * (selectedPackage?.discount_rate || 1);
+  const memberDiscount = currentUser?.membership_level === 'yearly' ? 0.6 :
+                        currentUser?.membership_level === 'monthly' ? 0.8 : 1;
+  const price = Math.round(withDiscount * memberDiscount * 100) / 100;
+
+  const canUseBalance = currentUser && currentUser.wallet_balance >= price;
+
   // 余额支付弹窗
-  if (showQRCode) {
+  if (showQRCode && qrCode) {
     return (
       <AnimatePresence>
         <motion.div
@@ -91,85 +249,26 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
             className="bg-gradient-to-b from-[#1a1a2e] to-[#0a0a0a] rounded-2xl p-6 max-w-sm w-full border border-[#d4a550]/30"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="text-center mb-4">
               <h3 className="text-xl font-bold text-[#d4a550]">扫码支付</h3>
-              <p className="text-gray-400 text-sm mt-1">{selectedLamp.name}</p>
+              <p className="text-gray-400 text-sm mt-1">{selectedLamp?.name}</p>
             </div>
 
-            {/* Amount */}
-            <div className="text-center mb-6">
-              <span className="text-3xl font-bold text-white">¥{Number(price).toFixed(2)}</span>
-            </div>
-
-            {/* Payment Tabs */}
-            <div className="flex gap-2 mb-6">
-              <button
-                onClick={() => handleQRPayment('wechat')}
-                className={`flex-1 py-3 rounded-xl font-medium transition-all ${
-                  activePayment === 'wechat'
-                    ? 'bg-[#07C160] text-white'
-                    : 'bg-[#07C160]/20 text-[#07C160]'
-                }`}
-              >
-                微信支付
-              </button>
-              <button
-                onClick={() => handleQRPayment('alipay')}
-                className={`flex-1 py-3 rounded-xl font-medium transition-all ${
-                  activePayment === 'alipay'
-                    ? 'bg-[#1677FF] text-white'
-                    : 'bg-[#1677FF]/20 text-[#1677FF]'
-                }`}
-              >
-                支付宝
-              </button>
-            </div>
-
-            {/* QR Code Display */}
-            <div className="flex justify-center mb-6">
-              {qrCode ? (
-                <div className="bg-white p-4 rounded-xl">
-                  <div className="w-40 h-40 flex items-center justify-center">
-                    {activePayment === 'wechat' ? (
-                      <div className="text-center">
-                        <div className="text-4xl mb-2">💚</div>
-                        <p className="text-xs text-gray-600">微信扫码</p>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <div className="text-4xl mb-2">💙</div>
-                        <p className="text-xs text-gray-600">支付宝扫码</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="w-40 h-40 flex items-center justify-center bg-white/10 rounded-xl">
-                  <div className="animate-spin w-8 h-8 border-2 border-[#d4a550] border-t-transparent rounded-full" />
-                </div>
-              )}
-            </div>
-
-            {/* Instructions */}
-            <div className="text-center text-gray-400 text-sm mb-4">
-              <p>请使用{activePayment === 'wechat' ? '微信' : '支付宝'}扫码支付</p>
-              <p className="text-xs mt-1">支付完成后自动确认</p>
-            </div>
-
-            {/* Loading indicator */}
-            {polling && (
-              <div className="flex items-center justify-center gap-2 text-[#d4a550] mb-4">
-                <div className="animate-pulse">等待支付中...</div>
+            <div className="flex justify-center mb-4">
+              <div className="bg-white p-2 rounded-lg">
+                <img src={qrCode} alt="支付二维码" className="w-48 h-48" />
               </div>
-            )}
+            </div>
 
-            {/* Close Button */}
+            <p className="text-center text-gray-400 text-sm mb-4">
+              {activePayment === 'wechat' ? '微信' : '支付宝'}扫码 · ¥{price.toFixed(2)}
+            </p>
+
             <button
               onClick={handleCloseQR}
-              className="w-full py-3 rounded-xl border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
+              className="w-full py-3 rounded-xl border-2 border-[#8B4513]/50 text-gray-300 hover:border-[#d4a550]/50"
             >
-              取消支付
+              取消
             </button>
           </motion.div>
         </motion.div>
@@ -177,150 +276,119 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
     );
   }
 
-  // 正常支付弹窗
+  // 主支付弹窗
+  if (!isOpen) return null;
+
   return (
     <AnimatePresence>
-      {isOpen && (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/70"
+        onClick={onClose}
+      >
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="bg-gradient-to-b from-[#1a1a2e] to-[#0a0a0a] rounded-t-3xl w-full max-w-md border-t border-[#d4a550]/30"
+          onClick={(e) => e.stopPropagation()}
         >
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={onClose}
-          />
-
-          {/* Modal */}
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-md bg-gradient-to-b from-[#1a1a2e] to-[#0a0a0a] rounded-t-3xl sm:rounded-3xl p-6"
-          >
-            {/* Close Button */}
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            {/* Header */}
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-[#d4a550] mb-2">确认祈福</h2>
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-4xl">{selectedLamp.icon}</span>
-                <span className="text-xl text-white">{selectedLamp.name}</span>
-              </div>
+          {/* Header */}
+          <div className="p-6 pb-4 border-b border-[#8B4513]/30">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold text-[#d4a550]">确认支付</h3>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
             </div>
+            <p className="text-gray-400 text-sm mt-1">{selectedLamp?.name}</p>
+          </div>
 
-            {/* Order Details */}
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between text-gray-300">
-                <span>套餐</span>
-                <span>{selectedPackage.name}</span>
-              </div>
-              <div className="flex justify-between text-gray-300">
-                <span>时长</span>
-                <span>
-                  {selectedPackage.minutes >= 1440
-                    ? `${Math.floor(selectedPackage.minutes / 1440)}天`
-                    : `${Math.floor(selectedPackage.minutes / 60)}小时`}
-                </span>
-              </div>
-              <div className="flex justify-between text-gray-300">
-                <span>祈福对象</span>
-                <span>{prayerTarget}</span>
-              </div>
-              <div className="border-t border-[#8B4513]/30 pt-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg text-white">应付金额</span>
-                  <span className="text-2xl font-bold text-[#d4a550]">¥{Number(price).toFixed(2)}</span>
-                </div>
-              </div>
+          {/* Price */}
+          <div className="p-6 pb-4">
+            <div className="text-center mb-6">
+              <p className="text-gray-400 text-sm">祈福时长：{selectedPackage?.name}</p>
+              <p className="text-4xl font-bold text-[#d4a550]">
+                ¥{price.toFixed(2)}
+              </p>
             </div>
 
             {/* Payment Methods */}
-            <div className="space-y-3 mb-6">
-              <p className="text-sm text-gray-400 mb-2">选择支付方式</p>
-
-              {/* WeChat Pay with QR */}
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleQRPayment('wechat')}
-                className="w-full p-4 rounded-xl border-2 border-[#07c160]/50 bg-[#07c160]/10 flex items-center justify-between hover:border-[#07c160]"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">💚</span>
-                  <div className="text-left">
-                    <p className="text-white font-medium">微信支付</p>
-                    <p className="text-xs text-gray-400">扫码付款</p>
-                  </div>
-                </div>
-                <span className="text-[#07c160]">→</span>
-              </motion.button>
-
-              {/* Alipay with QR */}
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleQRPayment('alipay')}
-                className="w-full p-4 rounded-xl border-2 border-[#1677FF]/50 bg-[#1677FF]/10 flex items-center justify-between hover:border-[#1677FF]"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">💙</span>
-                  <div className="text-left">
-                    <p className="text-white font-medium">支付宝</p>
-                    <p className="text-xs text-gray-400">扫码付款</p>
-                  </div>
-                </div>
-                <span className="text-[#1677FF]">→</span>
-              </motion.button>
-
-              {/* Balance Payment */}
-              {currentUser && (
+            <div className="space-y-3">
+              {/* 根据运行环境显示支付方式 */}
+              {runtime === 'wechat' && (
                 <motion.button
-                  onClick={handleBalancePayment}
+                  onClick={handleWechatPay}
+                  disabled={isProcessing}
                   whileTap={{ scale: 0.98 }}
-                  className={`w-full p-4 rounded-xl border-2 flex items-center justify-between transition-all ${
-                    canUseBalance
-                      ? 'border-[#d4a550] bg-[#d4a550]/10 hover:border-[#ffd700]'
-                      : 'border-red-500/50 bg-red-500/10'
-                  }`}
+                  className="w-full py-4 rounded-xl bg-[#07c160] text-white font-bold text-lg flex items-center justify-center gap-3 shadow-lg disabled:opacity-50"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">💰</span>
-                    <div className="text-left">
-                      <p className="text-white font-medium">余额支付</p>
-                      <p className="text-xs text-gray-400">
-                        余额：¥{Number(currentUser.wallet_balance).toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                  {canUseBalance ? (
-                    <span className="text-[#d4a550]">✓</span>
-                  ) : (
-                    <span className="text-red-500 text-sm">余额不足</span>
-                  )}
+                  <span>💚</span>
+                  {isProcessing ? '处理中...' : '微信支付'}
+                </motion.button>
+              )}
+
+              {runtime === 'alipay' && (
+                <motion.button
+                  onClick={handleAlipay}
+                  disabled={isProcessing}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full py-4 rounded-xl bg-[#1677ff] text-white font-bold text-lg flex items-center justify-center gap-3 shadow-lg disabled:opacity-50"
+                >
+                  <span>💙</span>
+                  {isProcessing ? '处理中...' : '支付宝支付'}
+                </motion.button>
+              )}
+
+              {runtime === 'browser' && (
+                <>
+                  <motion.button
+                    onClick={() => handleQRPayment('wechat')}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full py-4 rounded-xl bg-[#07c160] text-white font-bold text-lg flex items-center justify-center gap-3 shadow-lg"
+                  >
+                    <span>💚</span> 微信支付
+                  </motion.button>
+
+                  <motion.button
+                    onClick={() => handleQRPayment('alipay')}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full py-4 rounded-xl bg-[#1677ff] text-white font-bold text-lg flex items-center justify-center gap-3 shadow-lg"
+                  >
+                    <span>💙</span> 支付宝支付
+                  </motion.button>
+                </>
+              )}
+
+              {/* 余额支付 */}
+              {canUseBalance && (
+                <motion.button
+                  onClick={onPay}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full py-4 rounded-xl border-2 border-[#d4a550] text-[#d4a550] font-bold text-lg"
+                >
+                  余额支付（¥{currentUser.wallet_balance.toFixed(2)}）
                 </motion.button>
               )}
             </div>
+          </div>
 
-            {/* Login Prompt */}
-            {!currentUser && (
-              <div className="text-center p-4 bg-[#d4a550]/10 rounded-xl">
-                <p className="text-gray-300 mb-2">请先登录后再进行祈福</p>
-                <p className="text-sm text-gray-500">点击上方按钮登录</p>
-              </div>
-            )}
-          </motion.div>
+          {/* Footer */}
+          <div className="px-6 pb-6">
+            <p className="text-center text-gray-500 text-xs">
+              {runtime === 'wechat' && '微信环境内，使用微信支付'}
+              {runtime === 'alipay' && '支付宝环境内，使用支付宝支付'}
+              {runtime === 'browser' && '选择支付方式后扫码支付'}
+            </p>
+          </div>
         </motion.div>
-      )}
+      </motion.div>
     </AnimatePresence>
   );
 }
