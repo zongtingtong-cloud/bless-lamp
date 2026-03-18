@@ -222,18 +222,20 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
         );
 
         if (result.success) {
-          // 测试模式下直接标记已支付
-          if (result.data?.paid || result.data?.test_mode) {
-            onPay();
-            return;
-          }
-          
+          // 测试模式下仍然显示二维码，方便查看
           const qr = paymentType === 'wechat'
             ? result.data?.wechat_qr
             : result.data?.alipay_qr;
           setQrCode(qr);
           setExpireTime(300); // 5分钟倒计时
           setPolling(true);
+          
+          // 测试模式下3秒后自动确认
+          if (result.data?.test_mode) {
+            setTimeout(() => {
+              if (polling) onPay();
+            }, 3000);
+          }
         }
       }
     } catch (error) {
