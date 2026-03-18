@@ -335,6 +335,22 @@ switch ($action) {
         }
         break;
 
+    case 'get':
+        $orderId = intval($_GET['id'] ?? 0);
+        if ($orderId) {
+            $stmt = $pdo->prepare("SELECT o.*, lt.name as lamp_name, tp.name as package_name FROM orders o LEFT JOIN lamp_types lt ON o.lamp_type_id = lt.id LEFT JOIN time_packages tp ON o.package_id = tp.id WHERE o.id = ?");
+            $stmt->execute([$orderId]);
+            $order = $stmt->fetch();
+            if ($order) {
+                echo json_encode(['success' => true, 'data' => $order]);
+            } else {
+                echo json_encode(['success' => false, 'message' => '订单不存在']);
+            }
+        } else {
+            echo json_encode(['success' => false, 'message' => '订单ID不能为空']);
+        }
+        break;
+
     case 'list':
         $userId = $_GET['user_id'] ?? '';
         if ($userId) {
