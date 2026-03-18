@@ -85,12 +85,12 @@ export default function PackageSelection({ onSelect, selectedPackage }: PackageS
 
               <div className="text-right">
                 <p className="text-lg font-bold text-[#d4a550]">
-                  ¥{price.toFixed(2)}
+                  ¥{Number(price).toFixed(2)}
                 </p>
                 {pkg.discount_rate < 1 && (
                   <div className="flex items-center gap-1 justify-end">
                     <span className="text-xs text-gray-500 line-through">
-                      ¥{pkg.original_price.toFixed(2)}
+                      ¥{Number(pkg.original_price).toFixed(2)}
                     </span>
                     <span className="px-1.5 py-0.5 bg-[#e74c3c] text-white text-xs rounded">
                       {Math.round(pkg.discount_rate * 100)}折

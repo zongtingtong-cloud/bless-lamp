@@ -38,54 +38,7 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
   const [orderId, setOrderId] = useState<number | null>(null);
   const [polling, setPolling] = useState(false);
 
-  if (!selectedLamp || !selectedPackage) return null;
-
-  const basePrice = selectedLamp.base_price * selectedPackage.minutes;
-  const withDiscount = basePrice * selectedPackage.discount_rate;
-  const memberDiscount = currentUser?.membership_level === 'yearly' ? 0.6 :
-                        currentUser?.membership_level === 'monthly' ? 0.8 : 1;
-  const price = Math.round(withDiscount * memberDiscount * 100) / 100;
-
-  const canUseBalance = currentUser && currentUser.wallet_balance >= price;
-
-  // 创建订单并获取二维码
-  const handleQRPayment = async (paymentType: 'wechat' | 'alipay') => {
-    if (!currentUser) return;
-
-    setActivePayment(paymentType);
-    setShowQRCode(true);
-
-    try {
-      // 先创建订单（如果还没有）
-      let order = currentOrder;
-      if (!order) {
-        order = await createOrder();
-      }
-
-      if (order) {
-        setOrderId(order.id);
-
-        // 调用支付API获取二维码
-        const result = await createPayment(
-          String(order.id),
-          String(currentUser.id),
-          paymentType
-        );
-
-        if (result.success) {
-          const qr = paymentType === 'wechat'
-            ? result.data.wechat_qr
-            : result.data.alipay_qr;
-          setQrCode(qr);
-          setPolling(true);
-        }
-      }
-    } catch (error) {
-      console.error('创建支付失败:', error);
-    }
-  };
-
-  // 轮询检查支付状态
+  // 轮询检查支付状态 - 必须在 early return 之前
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (polling && orderId) {
@@ -146,7 +99,7 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
 
             {/* Amount */}
             <div className="text-center mb-6">
-              <span className="text-3xl font-bold text-white">¥{price.toFixed(2)}</span>
+              <span className="text-3xl font-bold text-white">¥{Number(price).toFixed(2)}</span>
             </div>
 
             {/* Payment Tabs */}
@@ -288,7 +241,7 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
               <div className="border-t border-[#8B4513]/30 pt-3">
                 <div className="flex justify-between items-center">
                   <span className="text-lg text-white">应付金额</span>
-                  <span className="text-2xl font-bold text-[#d4a550]">¥{price.toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-[#d4a550]">¥{Number(price).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -345,7 +298,7 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
                     <div className="text-left">
                       <p className="text-white font-medium">余额支付</p>
                       <p className="text-xs text-gray-400">
-                        余额：¥{currentUser.wallet_balance.toFixed(2)}
+                        余额：¥{Number(currentUser.wallet_balance).toFixed(2)}
                       </p>
                     </div>
                   </div>

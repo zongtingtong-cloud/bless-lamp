@@ -133,7 +133,7 @@ export default function QRPaymentModal({
 
             {/* Amount */}
             <div className="text-center mb-6">
-              <span className="text-3xl font-bold text-white">¥{amount.toFixed(2)}</span>
+              <span className="text-3xl font-bold text-white">¥{Number(amount).toFixed(2)}</span>
             </div>
 
             {/* Payment Tabs */}

@@ -515,7 +515,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   likePrayer: async (id: number) => {
     try {
       await api.likePrayer(String(id));
-    } catch (error) {}
+    } catch (error) {
+      // 忽略错误，不影响更新本地点赞数
+    }
 
     set((state) => ({
       prayerWall: state.prayerWall.map(item =>
@@ -556,7 +558,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (result.success) {
         set({ orders: result.data || [] });
       }
-    } catch (error) {}
+    } catch (error) {
+      // 忽略错误，保持空订单列表
+    }
   },
 
   loadActiveLamps: async () => {
@@ -568,7 +572,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (result.success) {
         set({ activeLamps: result.data || [] });
       }
-    } catch (error) {}
+    } catch (error) {
+      // 忽略错误，保持空列表
+    }
   },
 
   setCurrentPage: (page) => {
