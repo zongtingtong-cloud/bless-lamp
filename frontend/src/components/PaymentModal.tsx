@@ -211,6 +211,12 @@ export default function PaymentModal({ isOpen, onClose, onPay }: PaymentModalPro
         );
 
         if (result.success) {
+          // 测试模式下直接标记已支付
+          if (result.data?.paid || result.data?.test_mode) {
+            onPay();
+            return;
+          }
+          
           const qr = paymentType === 'wechat'
             ? result.data?.wechat_qr
             : result.data?.alipay_qr;

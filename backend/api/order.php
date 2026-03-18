@@ -241,6 +241,18 @@ switch ($action) {
                 $stmt = $pdo->prepare("INSERT INTO payment_logs (user_id, order_id, amount, payment_method, transaction_id, status) VALUES (?, ?, ?, ?, ?, 'pending')");
                 $stmt->execute([$userId, $orderId, $order['amount'], $paymentMethod, $paymentResult['data']['wechat']['hf_seq_id'] ?? '']);
 
+                // 测试模式下自动确认支付
+                if (!empty($paymentResult['test_mode'])) {
+                    $now = date('Y-m-d H:i:s');
+                    $endTime = date('Y-m-d H:i:s', strtotime($now) + 86400); // 测试模式：默认1天
+                    $stmt = $pdo->prepare("UPDATE orders SET status = 'paid', payment_method = ?, start_time = ?, end_time = ?, paid_at = ? WHERE id = ?");
+                    $stmt->execute([$paymentMethod, $now, $endTime, $now, $orderId]);
+                    
+                    // 添加祈福墙记录
+                    $stmt = $pdo->prepare("INSERT INTO prayer_wall (user_id, order_id, lamp_type_name, prayer_text, prayer_target, is_anonymous) SELECT user_id, id, (SELECT name FROM lamp_types WHERE id = lamp_type_id), prayer_text, prayer_target, is_anonymous FROM orders WHERE id = ?");
+                    $stmt->execute([$orderId]);
+                }
+
                 echo json_encode([
                     'success' => true,
                     'data' => [
@@ -249,6 +261,7 @@ switch ($action) {
                         'wechat_qr' => $paymentResult['data']['wechat']['qr_code'] ?? '',
                         'alipay_qr' => $paymentResult['data']['alipay']['qr_code'] ?? '',
                         'test_mode' => $paymentResult['test_mode'] ?? false,
+                        'paid' => !empty($paymentResult['test_mode']), // 测试模式下直接标记已支付
                     ]
                 ]);
             } else {
