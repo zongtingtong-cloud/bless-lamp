@@ -1,8 +1,7 @@
-// Admin Dashboard Page - 增强版
+// Admin Dashboard Page - 验证码登录版
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ADMIN_USER = { username: 'admin', password: 'admin123456' };
 const ADMIN_KEY = 'bless_admin_logged_in';
 
 type Tab = 'orders' | 'prayers' | 'stats' | 'users';
@@ -48,18 +47,124 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  
+  // 登录状态
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem(ADMIN_KEY) === 'true');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  
+  // 登录表单
+  const [loginType, setLoginType] = useState<'phone' | 'email'>('phone');
+  const [contact, setContact] = useState('');
+  const [code, setCode] = useState('');
+  const [sentCode, setSentCode] = useState('');
+  const [countdown, setCountdown] = useState(0);
   const [loginError, setLoginError] = useState('');
+  const [codeError, setCodeError] = useState('');
 
-  const handleLogin = () => {
-    if (username === ADMIN_USER.username && password === ADMIN_USER.password) {
-      setIsLoggedIn(true);
-      localStorage.setItem(ADMIN_KEY, 'true');
-      setLoginError('');
-    } else {
-      setLoginError('用户名或密码错误');
+  // 发送验证码
+  const sendCode = async () => {
+    if (!contact) {
+      setLoginError('请输入手机号或邮箱');
+      return;
+    }
+    
+    // 验证格式
+    const phoneRegex = /^1[3-9]\d{9}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (loginType === 'phone' && !phoneRegex.test(contact)) {
+      setLoginError('请输入正确的手机号');
+      return;
+    }
+    if (loginType === 'email' && !emailRegex.test(contact)) {
+      setLoginError('请输入正确的邮箱');
+      return;
+    }
+
+    // 生成6位验证码
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setSentCode(code);
+    setLoginError('');
+    setCodeError('');
+    
+    // 发送验证码（这里模拟发送，实际需要调用API）
+    try {
+      const res = await fetch('/api/admin.php?action=send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          contact, 
+          type: loginType,
+          code 
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // 显示验证码（开发模式）
+        alert(`验证码: ${code}`);
+        setCountdown(60);
+        const timer = setInterval(() => {
+          setCountdown(prev => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    } catch (e) {
+      // 即使API失败也显示验证码（开发模式）
+      alert(`验证码: ${code}`);
+      setCountdown(60);
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+  };
+
+  // 验证登录
+  const handleLogin = async () => {
+    if (!code) {
+      setCodeError('请输入验证码');
+      return;
+    }
+    if (code.length !== 6) {
+      setCodeError('验证码错误');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin.php?action=verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact, code })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setIsLoggedIn(true);
+        localStorage.setItem(ADMIN_KEY, 'true');
+        setLoginError('');
+        setCodeError('');
+      } else {
+        setCodeError(data.message || '验证码错误');
+      }
+    } catch (e) {
+      // 开发模式验证
+      if (code === sentCode) {
+        setIsLoggedIn(true);
+        localStorage.setItem(ADMIN_KEY, 'true');
+        setLoginError('');
+        setCodeError('');
+      } else {
+        setCodeError('验证码错误');
+      }
     }
   };
 
@@ -75,27 +180,65 @@ export default function AdminPage() {
       <div className="min-h-screen bg-gradient-to-b from-[#0a0a0a] via-[#1a1a2e] to-[#0a0a0a] flex items-center justify-center p-4">
         <div className="bg-gradient-to-b from-[#1a1a2e] to-[#0a0a0a] rounded-2xl p-8 w-full max-w-sm border border-[#d4a550]/30">
           <h2 className="text-2xl font-bold text-[#d4a550] text-center mb-6">🔐 管理后台</h2>
+          
+          {/* 登录方式切换 */}
+          <div className="flex mb-4 border border-[#8B4513]/30 rounded-xl overflow-hidden">
+            <button
+              onClick={() => { setLoginType('phone'); setContact(''); setCode(''); setLoginError(''); }}
+              className={`flex-1 py-2 text-sm ${loginType === 'phone' ? 'bg-[#d4a550] text-black' : 'bg-black/50 text-gray-400'}`}
+            >
+              手机号登录
+            </button>
+            <button
+              onClick={() => { setLoginType('email'); setContact(''); setCode(''); setLoginError(''); }}
+              className={`flex-1 py-2 text-sm ${loginType === 'email' ? 'bg-[#d4a550] text-black' : 'bg-black/50 text-gray-400'}`}
+            >
+              邮箱登录
+            </button>
+          </div>
+          
+          {/* 手机号/邮箱输入 */}
           <input
-            type="text"
-            placeholder="用户名"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            type={loginType === 'phone' ? 'tel' : 'email'}
+            placeholder={loginType === 'phone' ? '请输入手机号' : '请输入邮箱'}
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
             className="w-full px-4 py-3 mb-4 bg-black/50 border border-[#8B4513]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#d4a550]"
           />
-          <input
-            type="password"
-            placeholder="密码"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 mb-4 bg-black/50 border border-[#8B4513]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#d4a550]"
-          />
+          
+          {/* 验证码输入 + 发送按钮 */}
+          <div className="flex gap-2 mb-4">
+            <input
+              type="text"
+              placeholder="请输入验证码"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              maxLength={6}
+              className="flex-1 px-4 py-3 bg-black/50 border border-[#8B4513]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#d4a550]"
+            />
+            <button
+              onClick={sendCode}
+              disabled={countdown > 0}
+              className={`px-4 py-2 rounded-xl text-sm font-medium ${
+                countdown > 0 
+                  ? 'bg-gray-600 text-gray-400' 
+                  : 'bg-[#d4a550] text-black hover:bg-[#c49a40]'
+              }`}
+            >
+              {countdown > 0 ? `${countdown}s` : '获取验证码'}
+            </button>
+          </div>
+          
           {loginError && <p className="text-red-500 text-sm mb-4">{loginError}</p>}
+          {codeError && <p className="text-red-500 text-sm mb-4">{codeError}</p>}
+          
           <button
             onClick={handleLogin}
             className="w-full py-3 bg-[#d4a550] text-black font-bold rounded-xl hover:bg-[#c49a40]"
           >
             登录
           </button>
+          
           <button
             onClick={() => window.location.href = '/'}
             className="w-full mt-3 py-2 border border-[#8B4513]/50 text-gray-400 rounded-xl hover:border-[#d4a550]/50"
@@ -107,6 +250,7 @@ export default function AdminPage() {
     );
   }
 
+  // 登录后加载数据
   useEffect(() => {
     if (tab === 'orders') fetchOrders();
     if (tab === 'prayers') fetchPrayers();
@@ -145,7 +289,6 @@ export default function AdminPage() {
       if (data.success) setUsers(data.data || []);
     } catch (e) {
       console.error(e);
-      // 如果接口不存在，使用模拟数据
       setUsers([
         { id: 1, nickname: '善缘居士', wallet_balance: 100, membership_level: '普通用户', total_orders: 5, created_at: '2024-01-01' },
         { id: 2, nickname: '匿名', wallet_balance: 50, membership_level: '普通用户', total_orders: 2, created_at: '2024-01-15' },
@@ -211,7 +354,6 @@ export default function AdminPage() {
       <div className="p-4">
         {loading && <p className="text-center text-gray-400">加载中...</p>}
 
-        {/* 订单列表 */}
         {tab === 'orders' && !loading && (
           <div className="space-y-3">
             {filteredOrders.length === 0 ? (
@@ -250,7 +392,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 祈福列表 */}
         {tab === 'prayers' && !loading && (
           <div className="space-y-3">
             {prayers.length === 0 ? (
@@ -281,7 +422,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 统计 */}
         {tab === 'stats' && !loading && (
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-[#d4a550]/10 rounded-xl border border-[#d4a550]/30 text-center">
@@ -303,7 +443,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 用户列表 */}
         {tab === 'users' && !loading && (
           <div className="space-y-3">
             {users.length === 0 ? (
@@ -351,7 +490,6 @@ export default function AdminPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-xl font-bold text-[#d4a550] mb-4">📝 订单详情</h3>
-              
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-400">订单ID</span>
@@ -379,30 +517,7 @@ export default function AdminPage() {
                   <span className="text-gray-400">祈福对象</span>
                   <span className="text-white">{selectedOrder.prayer_target}</span>
                 </div>
-                {selectedOrder.prayer_text && (
-                  <div className="mt-2 pt-2 border-t border-[#8B4513]/30">
-                    <span className="text-gray-400">祈福语：</span>
-                    <p className="text-white mt-1">{selectedOrder.prayer_text}</p>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-gray-400">创建时间</span>
-                  <span className="text-white text-xs">{selectedOrder.created_at}</span>
-                </div>
-                {selectedOrder.paid_at && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">支付时间</span>
-                    <span className="text-white text-xs">{selectedOrder.paid_at}</span>
-                  </div>
-                )}
-                {selectedOrder.start_time && selectedOrder.end_time && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">有效期</span>
-                    <span className="text-white text-xs">{selectedOrder.start_time} ~ {selectedOrder.end_time}</span>
-                  </div>
-                )}
               </div>
-
               <button
                 onClick={() => setSelectedOrder(null)}
                 className="w-full mt-4 py-3 rounded-xl border-2 border-[#8B4513]/50 text-gray-300 hover:border-[#d4a550]/50"

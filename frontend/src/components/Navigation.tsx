@@ -2,15 +2,23 @@
 import { motion } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
 
+const ADMIN_KEY = 'bless_admin_logged_in';
+
 export default function Navigation() {
   const { currentPage, setCurrentPage } = useAppStore();
+
+  const isAdmin = localStorage.getItem(ADMIN_KEY) === 'true';
 
   const navItems = [
     { id: 'home', icon: '🏠', label: '首页' },
     { id: 'prayer-wall', icon: '🧧', label: '祈福墙' },
     { id: 'profile', icon: '👤', label: '我的' },
-    { id: 'admin', icon: '📊', label: '管理' }
   ];
+
+  // 只有admin登录后才显示管理入口
+  if (isAdmin) {
+    navItems.push({ id: 'admin', icon: '📊', label: '管理' });
+  }
 
   return (
     <motion.nav

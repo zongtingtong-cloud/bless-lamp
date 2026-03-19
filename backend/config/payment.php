@@ -17,7 +17,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAj0cErpkbk+6gznLFGn8+Y9VNvdL441I2uWuy
 define('HUIFU_NOTIFY_URL', 'https://bless-you.top/api/order.php?action=payment-notify');
 define('HUIFU_API_URL', 'https://api.huifu.com');
 define('HUIFU_SIGN_TYPE', 'RSA');
-define('HUIFU_TEST_MODE', true);
+define('HUIFU_TEST_MODE', false);
 
 function getHuifuConfig() {
     return [
