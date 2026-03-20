@@ -19,7 +19,7 @@ define('HUIFU_API_URL', 'https://api.huifu.com');
 define('HUIFU_PAYMENT_API', '/v3/trade/payment/jspay');
 define('HUIFU_QUERY_API', '/v3/trade/query');
 define('HUIFU_SIGN_TYPE', 'RSA');
-define('HUIFU_TEST_MODE', true);
+define('HUIFU_TEST_MODE', false);
 
 function getHuifuConfig() {
     return [
