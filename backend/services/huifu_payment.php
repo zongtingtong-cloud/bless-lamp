@@ -82,7 +82,8 @@ class HuifuPayment {
             'req_seq_id' => $this->generateSeqId($params['order_id'], 'WX'),
             'huifu_id' => HUIFU_HUIFU_ID,
             'goods_desc' => $params['goods_desc'],
-            'trade_type' => 'T_NATIVE', // 微信正扫
+            'trade_type' => 'T_JSAPI', // 微信JSAPI
+            'openid' => $params['sub_openid'] ?? '',
             'trans_amt' => number_format($params['amount'], 2, '.', ''),
             'time_expire' => date('YmdHis', time() + 7200),
         ];
@@ -117,13 +118,13 @@ class HuifuPayment {
      * 创建支付宝支付
      */
     private function createAlipayPayment($params) {
-        // 汇付支付宝正扫API
+        // 汇付支付宝JSAPI
         $data = [
             'req_date' => date('Ymd'),
             'req_seq_id' => $this->generateSeqId($params['order_id'], 'ALI'),
             'huifu_id' => HUIFU_HUIFU_ID,
             'goods_desc' => $params['goods_desc'],
-            'trade_type' => 'T_NATIVE', // 支付宝正扫
+            'trade_type' => 'T_JSAPI', // 支付宝JSAPI
             'trans_amt' => number_format($params['amount'], 2, '.', ''),
             'time_expire' => date('YmdHis', time() + 7200),
             'alipay_data' => json_encode([
