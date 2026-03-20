@@ -14,10 +14,11 @@ define('HUIFU_HUIFU_PUBLIC_KEY', '-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAj0cErpkbk+6gznLFGn8+Y9VNvdL441I2uWuyq439aMSUYSoZzTXEglE/gyVud4+6+Y7+8Ho9Grm5cVCIW/ivFcOL0KWX8AW6zdWjmrxUU4hjHDfrdBNgAFNz6bRYB//WINPHa64vJOKjOMEn683QCHdMejyK4+bBiylIKCWNmfwWxf4Qw4yl6+tH6GXQR1K3Q8OeiaMhr3fq4+LT4a7OlQZ67VTkmChM3E/rfNLfOT30CsZePthRwuMXslZY9sDP+uExnGWPB1IO7f3+7GkicPshM6Ak4R8Vw0N0oXV6I7R1dN/ojlRXqB0x7ORCzO0HgM2cZyQ+Lnjy387LinNJJQIDAQAB
 -----END PUBLIC KEY-----');
 
-define('HUIFU_NOTIFY_URL', 'https://bless-you.top/api/order.php?action=payment-notify');
+define('HUIFU_NOTIFY_URL', 'https://bless.mymytong.com/api/order.php?action=payment-notify');
 define('HUIFU_API_URL', 'https://api.huifu.com');
+define('HUIFU_PAYMENT_API', '/gateway/v1/trade/payment');
 define('HUIFU_SIGN_TYPE', 'RSA');
-define('HUIFU_TEST_MODE', false);
+define('HUIFU_TEST_MODE', true);
 
 function getHuifuConfig() {
     return [
