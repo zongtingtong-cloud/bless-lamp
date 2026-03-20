@@ -16,7 +16,8 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAj0cErpkbk+6gznLFGn8+Y9VNvdL441I2uWuy
 
 define('HUIFU_NOTIFY_URL', 'https://bless.mymytong.com/api/order.php?action=payment-notify');
 define('HUIFU_API_URL', 'https://api.huifu.com');
-define('HUIFU_PAYMENT_API', '/gateway/v1/trade/payment');
+define('HUIFU_PAYMENT_API', '/v3/trade/payment/jspay');
+define('HUIFU_QUERY_API', '/v3/trade/query');
 define('HUIFU_SIGN_TYPE', 'RSA');
 define('HUIFU_TEST_MODE', true);
 
